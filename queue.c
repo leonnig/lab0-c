@@ -22,8 +22,7 @@ void q_free(struct list_head *head)
     if (head) {
         struct list_head *cur = head->next;
         while (cur != head) {
-            element_t *ele;
-            ele = container_of(cur, element_t, list);
+            element_t *ele = container_of(cur, element_t, list);
             cur = cur->next;
             q_release_element(ele);
         }
