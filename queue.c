@@ -108,7 +108,7 @@ int q_size(struct list_head *head)
         return 0;
     int cnt = 0;
     struct list_head *cur;
-    list_for_each (cur, head)
+    list_for_each(cur, head)
         cnt++;
 
     return cnt;
@@ -117,7 +117,20 @@ int q_size(struct list_head *head)
 /* Delete the middle node in queue */
 bool q_delete_mid(struct list_head *head)
 {
-    // https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/
+    if (!head || head->next == head)
+        return NULL;
+
+    struct list_head *ptr = head->next;
+    for (const struct list_head *fast = head->next;
+         fast->next != head && fast->next->next != head;
+         fast = fast->next->next) {
+        ptr = ptr->next;
+    }
+    element_t *ele = list_entry(ptr, element_t, list);
+    list_del(ptr);
+    free(ele->value);
+    free(ele);
+
     return true;
 }
 
