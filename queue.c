@@ -282,16 +282,54 @@ void q_sort(struct list_head *head, bool descend)
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (head && !list_empty(head) && !list_is_singular(head)) {
+        struct list_head *cmp = head->next;
+        struct list_head *ptr = cmp->next;
+        element_t *left = NULL;
+        const element_t *right = NULL;
+        while (ptr != head) {
+            left = list_entry(cmp, element_t, list);
+            right = list_entry(ptr, element_t, list);
+            if (strcmp(left->value, right->value) > 0) {
+                list_del(cmp);
+                q_release_element(left);
+                cmp = head->next;
+                ptr = cmp->next;
+            } else {
+                cmp = ptr;
+                ptr = ptr->next;
+            }
+        }
+    }
+
+    return q_size(head);
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (head && !list_empty(head) && !list_is_singular(head)) {
+        struct list_head *cmp = head->next;
+        struct list_head *ptr = cmp->next;
+        element_t *left = NULL;
+        const element_t *right = NULL;
+        while (ptr != head) {
+            left = list_entry(cmp, element_t, list);
+            right = list_entry(ptr, element_t, list);
+            if (strcmp(left->value, right->value) < 0) {
+                list_del(cmp);
+                q_release_element(left);
+                cmp = head->next;
+                ptr = cmp->next;
+            } else {
+                cmp = ptr;
+                ptr = ptr->next;
+            }
+        }
+    }
+
+    return q_size(head);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
