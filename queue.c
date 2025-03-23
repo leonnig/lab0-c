@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "queue.h"
+#include "random.h"
 
 /* Create an empty queue */
 struct list_head *q_new()
@@ -353,4 +354,24 @@ int q_merge(struct list_head *head, bool descend)
     }
 
     return q_size(tmp->q);
+}
+
+/* Shuffle elements in queue */
+void q_shuffle(struct list_head *head)
+{
+    struct list_head *new = head->prev, *old = head->next, *tmp = old->prev;
+    int len = q_size(head);
+    while (len > 0) {
+        int num = rand() % len, cnt = 0;
+        while (cnt != num) {
+            old = old->next;
+            cnt += 1;
+        }
+        tmp = old->prev;
+        list_move(old, new);
+        list_move(new, tmp);
+        new = old->prev;
+        old = head->next;
+        len -= 1;
+    }
 }
