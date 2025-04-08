@@ -42,6 +42,7 @@
 
 #define ENOUGH_MEASURE 10000
 #define TEST_TRIES 10
+#define NUMBER_PERCENTILES 100
 
 /* Number of percentiles to calculate */
 #define NUM_PERCENTILES (100)
@@ -54,6 +55,33 @@ enum {
     t_threshold_bananas = 500, /* Test failed with overwhelming probability */
     t_threshold_moderate = 10, /* Test failed */
 };
+
+static int cmp(const int64_t *a, const int64_t *b)
+{
+    if (*a == *b)
+        return 0;
+    return (*a > *b) ? 1 : -1;
+}
+
+static int64_t percentile(int64_t *a_sorted, double which, size_t size)
+{
+    size_t array_position = (size_t) ((double) size * (double) which);
+    assert(array_position < size);
+    return a_sorted[array_position];
+}
+
+static void prepare_percentiles(int64_t *exe_times, int64_t *percentiles)
+{
+    qsort(exe_times, N_MEASURES, sizeof(int64_t),
+          (int (*)(const void *, const void *)) cmp);
+    for (size_t i = 0; i < NUMBER_PERCENTILES; i++) {
+        percentiles[i] = percentile(
+            exe_times,
+            1 - (pow(0.5, 10 * (double) (i + 1) / NUMBER_PERCENTILES)),
+            N_MEASURES);
+    }
+}
+
 
 static void __attribute__((noreturn)) die(void)
 {
