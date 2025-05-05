@@ -23,6 +23,7 @@
 #include "list.h"
 #include "random.h"
 
+
 extern void q_shuffle(struct list_head *head);
 
 /* Shannon entropy */
@@ -47,6 +48,7 @@ extern int show_entropy;
 #include "queue.h"
 
 #include "console.h"
+#include "list_sort.h"
 #include "report.h"
 
 /* Settable parameters */
@@ -669,6 +671,97 @@ bool do_sort(int argc, char *argv[])
     return ok && !error_check();
 }
 
+bool do_listsort(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    int cnt = 0;
+    if (!current || !current->q)
+        report(3, "Warning: Calling sort on null queue");
+    else
+        cnt = q_size(current->q);
+    error_check();
+
+    if (cnt < 2)
+        report(3, "Warning: Calling sort on single node");
+    error_check();
+
+    set_noallocate_mode(true);
+
+/* If the number of elements is too large, it may take a long time to check the
+ * stability of the sort. So, MAX_NODES is used to limit the number of elements
+ * to check the stability of the sort. */
+#define MAX_NODES 100000
+    struct list_head *nodes[MAX_NODES];
+    unsigned no = 0;
+    if (current && current->size && current->size <= MAX_NODES) {
+        element_t *entry;
+        list_for_each_entry(entry, current->q, list)
+            nodes[no++] = &entry->list;
+    } else if (current && current->size > MAX_NODES)
+        report(1,
+               "Warning: Skip checking the stability of the sort because the "
+               "number of elements %d is too large, exceeds the limit %d.",
+               current->size, MAX_NODES);
+
+    if (current && exception_setup(true))
+        list_sort(current->q, cmp, descend);
+    exception_cancel();
+    set_noallocate_mode(false);
+
+    bool ok = true;
+    if (current && current->size) {
+        for (struct list_head *cur_l = current->q->next;
+             cur_l != current->q && --cnt; cur_l = cur_l->next) {
+            /* Ensure each element in ascending/descending order */
+            element_t *item, *next_item;
+            item = list_entry(cur_l, element_t, list);
+            next_item = list_entry(cur_l->next, element_t, list);
+            if (!descend && strcmp(item->value, next_item->value) > 0) {
+                report(1, "ERROR: Not sorted in ascending order");
+                ok = false;
+                break;
+            }
+
+            if (descend && strcmp(item->value, next_item->value) < 0) {
+                report(1, "ERROR: Not sorted in descending order");
+                ok = false;
+                break;
+            }
+            /* Ensure the stability of the sort */
+            if (current->size <= MAX_NODES &&
+                !strcmp(item->value, next_item->value)) {
+                bool unstable = false;
+                for (unsigned i = 0; i < MAX_NODES; i++) {
+                    if (nodes[i] == cur_l->next) {
+                        unstable = true;
+                        break;
+                    }
+                    if (nodes[i] == cur_l) {
+                        break;
+                    }
+                }
+                if (unstable) {
+                    report(
+                        1,
+                        "ERROR: Not stable sort. The duplicate strings \"%s\" "
+                        "are not in the same order.",
+                        item->value);
+                    ok = false;
+                    break;
+                }
+            }
+        }
+    }
+#undef MAX_NODES
+
+    q_show(3);
+    return ok && !error_check();
+}
+
 static bool do_dm(int argc, char *argv[])
 {
     if (argc != 1) {
@@ -1120,6 +1213,7 @@ static void console_init()
     ADD_COMMAND(reverseK, "Reverse the nodes of the queue 'K' at a time",
                 "[K]");
     ADD_COMMAND(shuffle, "Shuffle entire queue.", "");
+    ADD_COMMAND(listsort, "List_sorting from linux kernel.", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",
